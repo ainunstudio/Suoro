@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vocalis AI Studio — Gemini TTS Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        bgMain: '#101010',
+                        bgPanel: '#1C1A19',
+                        redMain: '#C62828',
+                        redDark: '#8E1616',
+                        vanillaDark: '#D6B98C',
+                        vanillaLight: '#F2E5CE',
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #101010;
+            color: #F2E5CE;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #101010;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2d2927;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #D6B98C;
+        }
+        .vibe-chip.active {
+            background-color: #C62828;
+            color: #F2E5CE;
+            border-color: #C62828;
+            box-shadow: 0 0 15px rgba(198, 40, 40, 0.4);
+        }
+        .speaker-card.active {
+            border-color: #C62828;
+            background-color: rgba(198, 40, 40, 0.12);
+        }
+        input[type="range"] {
+            accent-color: #C62828;
+        }
+        @keyframes pulse-bar {
+            0%, 100% { transform: scaleY(0.3); }
+            50% { transform: scaleY(1); }
+        }
+        .wave-bar {
+            animation: pulse-bar 1.2s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-redMain selection:text-vanillaLight">
+
+    <!-- Top Navigation Bar (AI Studio Style) -->
+    <header class="border-b border-[#2c2826] bg-bgPanel/90 backdrop-blur-md sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-redMain to-redDark flex items-center justify-center shadow-lg shadow-redMain/20">
+                    <svg class="w-6 h-6 text-vanillaLight" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-bold text-lg tracking-tight text-vanillaLight">Playground TTS</h1>
+                        <span class="text-[11px] font-mono uppercase px-2 py-0.5 rounded-full bg-redMain/20 text-vanillaDark border border-redMain/40">AI Studio</span>
+                    </div>
+                    <p class="text-xs text-vanillaDark/70 hidden sm:block">Turn text into natural-sounding speech • WAV PCM 24kHz</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 sm:gap-3">
+                <div id="apiStatusBadge" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#141312] border border-[#2c2826] text-xs text-vanillaDark">
+                    <span id="statusDot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span id="statusText">Siap Pakai (Aktif)</span>
+                </div>
+                <button id="downloadBundleBtn" type="button" class="px-3 py-1.5 rounded-xl bg-redMain/20 hover:bg-redMain text-vanillaLight border border-redMain/40 text-xs font-semibold flex items-center gap-1.5 transition" title="Unduh 1 Paket Installer Node.js Lengkap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+                    </svg>
+                    <span class="hidden md:inline">Paket Server</span>
+                </button>
+                <button id="toggleModelModalBtn" class="p-2 rounded-lg bg-[#141312] hover:bg-[#252220] text-vanillaDark border border-[#2c2826] transition" title="Pengaturan Model">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Panel: Speaker & Voice Vibe Configuration -->
+        <aside class="lg:col-span-5 space-y-6">
+            
+            <!-- Language & Model Card -->
+            <div class="bg-bgPanel border border-[#2c2826] rounded-2xl p-5 shadow-xl space-y-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-sm font-semibold uppercase tracking-wider text-vanillaDark flex items-center gap-2">
+                        <svg class="w-4 h-4 text-redMain" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"></path>
+                        </svg>
+                        Bahasa & Model
+                    </h2>
+                    <span class="text-xs font-mono text-vanillaDark/60" id="activeModelLabel">gemini-2.5-flash-preview-tts</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-vanillaDark mb-1.5">Pilih Bahasa</label>
+                        <select id="languageSelect" class="w-full bg-bgMain border border-[#332e2c] focus:border-redMain rounded-xl px-3.5 py-2.5 text-sm text-vanillaLight outline-none transition">
+                            <option value="id-ID" selected>🇮🇩 Bahasa Indonesia (Utama)</option>
+                            <option value="en-US">🇺🇸 English (US)</option>
+                            <option value="en-GB">🇬🇧 English (UK)</option>
+                            <option value="jv-ID">🇮🇩 Bahasa Jawa / Sunda (Aksen Lokal)</option>
+                            <option value="ja-JP">🇯🇵 日本語 (Japanese)</option>
+                            <option value="ko-KR">🇰🇷 한국어 (Korean)</option>
+                            <option value="ar-SA">🇸🇦 العربية (Arabic)</option>
+                            <option value="es-ES">🇪🇸 Español (Spanish)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-vanillaDark mb-1.5">Engine Model TTS</label>
+                        <select id="modelSelect" class="w-full bg-bgMain border border-[#332e2c] focus:border-redMain rounded-xl px-3.5 py-2.5 text-sm text-vanillaLight outline-none transition font-mono">
+                            <option value="gemini-2.5-flash-preview-tts" selected>Gemini 2.5 Flash TTS</option>
+                            <option value="gemini-3.8-flash-tts">Gemini 3.8 Flash TTS</option>
+                            <option value="gemini-2.5-pro-preview-tts">Gemini 2.5 Pro TTS</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Speaker Selection (Male / Female + Personas) -->
+            <div class="bg-bgPanel border border-[#2c2826] rounded-2xl p-5 shadow-xl space-y-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-sm font-semibold uppercase tracking-wider text-vanillaDark flex items-center gap-2">
+                        <svg class="w-4 h-4 text-redMain" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                        Karakter Suara (Speaker)
+                    </h2>
+                    <!-- Gender Filter Tabs -->
+                    <div class="flex bg-bgMain p-1 rounded-xl border border-[#2c2826] text-xs">
+                        <button type="button" data-gender="all" class="gender-tab px-2.5 py-1 rounded-lg bg-redMain text-vanillaLight font-medium transition">Semua</button>
+                        <button type="button" data-gender="female" class="gender-tab px-2.5 py-1 rounded-lg text-vanillaDark hover:text-vanillaLight transition">Wanita</button>
+                        <button type="button" data-gender="male" class="gender-tab px-2.5 py-1 rounded-lg text-vanillaDark hover:text-vanillaLight transition">Pria</button>
+                    </div>
+                </div>
+
+                <!-- Voice Persona Grid -->
+                <div id="speakerGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-60 overflow-y-auto pr-1">
+                    <!-- Rendered dynamically by JS -->
+                </div>
+            </div>
+
+            <!-- Characteristics / Vibe & Delivery Settings -->
+            <div class="bg-bgPanel border border-[#2c2826] rounded-2xl p-5 shadow-xl space-y-5">
+                <div>
+                    <div class="flex items-center justify-between mb-2.5">
+                        <h2 class="text-sm font-semibold uppercase tracking-wider text-vanillaDark flex items-center gap-2">
+                            <svg class="w-4 h-4 text-redMain" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                            </svg>
+                            Karakteristik / Vibe Suara
+                        </h2>
+                        <span id="selectedVibeBadge" class="text-xs text-redMain font-semibold">Profesional</span>
+                    </div>
+                    <div id="vibeContainer" class="flex flex-wrap gap-2">
+                        <!-- 9 Required Vibes -->
+                        <button type="button" data-vibe="Ceria" data-desc="Cheerful, bright, upbeat, enthusiastic and smiling tone" class="vibe-chip px-3 py-1.5 rounded-xl bg-bgMain border border-[#332e2c] text-xs text-vanillaDark hover:border-vanillaDark transition">😊 Ceria</button>
+                        <button type="button" data-vibe="Sedih" data-desc="Melancholic, sad, soft, slow and emotional tone with gentle sighs" class="vibe-chip px-3 py-1.5 rounded-xl bg-bgMain border border-[#332e2c] text-xs text-vanillaDark hover:border-vanillaDark transition">😢 Sedih</button>
+                        <button type="button" data-vibe="Puitis" data-desc="Poetic, rhythmic, soulful, artistic and deeply expressive intonation" class="vibe-chip px-3 py-1.5 rounded-xl bg-bgMain border border-[#332e2c] text-xs text-vanillaDark hover:border-vanillaDark transition">🪶 Puitis</button>
+                        <button type="button" data-vibe="Dramatis" data-desc="Dramatic, intense, cinematic, suspenseful with strong vocal modulation" class="vibe-chip px-3 py-1.5 rounded-xl bg-bgMain border border-[#332e2c] text-xs text-vanillaDark hover:border-vanillaDark transition">🎭 Dramatis</button>
+                        <button type="button" data-vibe="Santai" data-desc="Casual, relaxed, laid-back, conversational and friendly everyday tone" class="vibe-chip px-3 py-1.5 rounded-xl bg-bgMain border border-[#332e2c] text-xs text-vanillaDark hover:border-vanillaDark transition">☕ Santai</button>
+                        <button type="button" data-vibe="Profesional" data-desc="Professional, clear, articulate, authoritative yet welcoming broadcast tone" class="vibe-chip active px-3 py-1.5 rounded-xl bg-bgMain border border-[#332e2c] text-xs text-vanillaDark hover:border-vanillaDark transition">💼 Profesional</button>
+                        <button type="button" data-vibe="Tegas" data-desc="Firm, commanding, bold, confident and decisive delivery" class="vibe-chip px-3 py-1.5 rounded-xl bg-bgMain border border-[#332e2c] text-xs text-vanillaDark hover:border-vanillaDark transition">⚡ Tegas</button>
+                        <button type="button" data-vibe="Emosional" data-desc="Deeply emotional, heartfelt, quivering with empathy and raw feeling" class="vibe-chip px-3 py-1.5 rounded-xl bg-bgMain border border-[#332e2c] text-xs text-vanillaDark hover:border-vanillaDark transition">❤️‍🔥 Emosional</button>
+                        <button type="button" data-vibe="Bercerita" data-desc="Engaging storyteller, warm, captivating narration with natural dramatic pauses" class="vibe-chip px-3 py-1.5 rounded-xl bg-bgMain border border-[#332e2c] text-xs text-vanillaDark hover:border-vanillaDark transition">📖 Bercerita</button>
+                    </div>
+                </div>
+
+                <!-- Speed & Delivery Style -->
+                <div class="pt-3 border-t border-[#2c2826] space-y-4">
+                    <div>
+                        <div class="flex justify-between text-xs mb-1.5">
+                            <span class="text-vanillaDark">Kecepatan Bicara (Pace)</span>
+                            <span id="speedValueLabel" class="font-mono text-vanillaLight">1.0x (Normal)</span>
+                        </div>
+                        <input id="speedRange" type="range" min="0.5" max="1.75" step="0.05" value="1.0" class="w-full h-2 bg-bgMain rounded-lg cursor-pointer">
+                        <div class="flex justify-between text-[10px] text-vanillaDark/50 mt-1">
+                            <span>0.5x Lambat</span>
+                            <span>1.0x Normal</span>
+                            <span>1.75x Cepat</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-vanillaDark mb-1.5">Gaya Penyampaian (Style)</label>
+                            <select id="deliveryStyleSelect" class="w-full bg-bgMain border border-[#332e2c] focus:border-redMain rounded-xl px-3 py-2 text-xs text-vanillaLight outline-none">
+                                <option value="Natural & Jernih" selected>Natural & Jernih (Default)</option>
+                                <option value="Narration (Commanding, rich modulation, dramatic pauses)">Narration (Dokumenter/Buku)</option>
+                                <option value="Friendly (Warm and neutral delivery with micro-pauses)">Friendly (Asisten Ramah)</option>
+                                <option value="Whisper (Quiet, intimate, soft-spoken ASMR style)">Whisper (Berbisik Intim)</option>
+                                <option value="Promote (High energy, commercial voiceover)">Promote (Iklan Komersial)</option>
+                                <option value="News Anchor (Crisp, formal television journalist)">News Anchor (Pembawa Berita)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-vanillaDark mb-1.5">Intonasi / Pitch</label>
+                            <select id="pitchSelect" class="w-full bg-bgMain border border-[#332e2c] focus:border-redMain rounded-xl px-3 py-2 text-xs text-vanillaLight outline-none">
+                                <option value="Natural">Natural (Sesuai Karakter)</option>
+                                <option value="Low & Deep">Rendah & Berat (Deep)</option>
+                                <option value="Medium-Warm">Sedang & Hangat (Warm)</option>
+                                <option value="High & Bright">Tinggi & Cerah (Bright)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-vanillaDark mb-1">Instruksi Direktur Suara Tambahan (Opsional)</label>
+                        <input id="customStyleInput" type="text" placeholder="Contoh: Berikan jeda sejenak di setiap koma, terdengar seperti podcaster malam..." class="w-full bg-bgMain border border-[#332e2c] focus:border-redMain rounded-xl px-3.5 py-2 text-xs text-vanillaLight placeholder-vanillaDark/40 outline-none">
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Right Panel: Narrative Editor & Audio Output Studio -->
+        <section class="lg:col-span-7 flex flex-col gap-6">
+            
+            <!-- Narrative Input Card -->
+            <div class="bg-bgPanel border border-[#2c2826] rounded-2xl p-5 shadow-xl flex-1 flex flex-col">
+                <div class="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-[#2c2826]">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-redMain"></span>
+                        <h2 class="text-sm font-semibold uppercase tracking-wider text-vanillaLight">Kolom Narasi Studio</h2>
+                    </div>
+
+                    <!-- Expression Quick Tags (Inspired by AI Studio Screenshot) -->
+                    <div class="flex items-center flex-wrap gap-1.5">
+                        <span class="text-[11px] text-vanillaDark/70 mr-1">+ Ekspresi:</span>
+                        <button type="button" data-tag="[jeda sejenak] " class="expr-tag text-[11px] font-mono px-2 py-1 rounded-lg bg-bgMain hover:bg-redMain/20 text-vanillaDark hover:text-vanillaLight border border-[#332e2c] transition">&lt;jeda&gt;</button>
+                        <button type="button" data-tag="[tertawa kecil] " class="expr-tag text-[11px] font-mono px-2 py-1 rounded-lg bg-bgMain hover:bg-redMain/20 text-vanillaDark hover:text-vanillaLight border border-[#332e2c] transition">&lt;tertawa&gt;</button>
+                        <button type="button" data-tag="[menghela napas] " class="expr-tag text-[11px] font-mono px-2 py-1 rounded-lg bg-bgMain hover:bg-redMain/20 text-vanillaDark hover:text-vanillaLight border border-[#332e2c] transition">&lt;hela napas&gt;</button>
+                        <button type="button" data-tag="[terkesiap] " class="expr-tag text-[11px] font-mono px-2 py-1 rounded-lg bg-bgMain hover:bg-redMain/20 text-vanillaDark hover:text-vanillaLight border border-[#332e2c] transition">&lt;gasp&gt;</button>
+                    </div>
+                </div>
+
+                <!-- Sample Presets Bar -->
+                <div class="flex items-center justify-between gap-2 mb-3">
+                    <div class="flex items-center gap-1.5 overflow-x-auto pb-1">
+                        <span class="text-xs text-vanillaDark/70 whitespace-nowrap">Contoh Teks:</span>
+                        <button type="button" data-sample="narasi" class="sample-btn text-xs px-2.5 py-1 rounded-lg bg-bgMain border border-[#2c2826] hover:border-vanillaDark text-vanillaDark whitespace-nowrap transition">📚 Narasi Dokumenter</button>
+                        <button type="button" data-sample="puisi" class="sample-btn text-xs px-2.5 py-1 rounded-lg bg-bgMain border border-[#2c2826] hover:border-vanillaDark text-vanillaDark whitespace-nowrap transition">🍂 Puisi Senja</button>
+                        <button type="button" data-sample="iklan" class="sample-btn text-xs px-2.5 py-1 rounded-lg bg-bgMain border border-[#2c2826] hover:border-vanillaDark text-vanillaDark whitespace-nowrap transition">🚀 Promosi Produk</button>
+                    </div>
+
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button id="pasteTextBtn" type="button" class="text-xs px-2.5 py-1 rounded-lg bg-bgMain hover:bg-[#282422] text-vanillaDark border border-[#332e2c] flex items-center gap-1 transition" title="Tempel dari Clipboard">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                            </svg>
+                            Tempel
+                        </button>
+                        <button id="clearTextBtn" type="button" class="text-xs px-2.5 py-1 rounded-lg bg-redDark/30 hover:bg-redMain text-vanillaLight border border-redMain/40 flex items-center gap-1 transition" title="Bersihkan Kolom Narasi">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                            Hapus Teks
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Large Unlimited Textarea -->
+                <div class="relative flex-1 flex flex-col">
+                    <textarea id="narrativeInput" rows="10" placeholder="Ketik atau tempel (paste) naskah narasi Anda di sini tanpa batas karakter. Jika naskah sangat panjang, sistem otomatis memprosesnya secara bertahap (multi-chunk) dan menggabungkannya menjadi satu file audio WAV utuh tanpa memotong kalimat..." class="w-full flex-1 bg-bgMain border border-[#332e2c] focus:border-redMain rounded-xl p-4 text-sm sm:text-base text-vanillaLight placeholder-vanillaDark/35 leading-relaxed outline-none resize-y transition font-sans">Selamat datang di studio suara berbasis kecerdasan buatan Google Gemini. Dengan teknologi sintesis suara terbaru, setiap kalimat yang Anda tulis dapat dihidupkan menjadi narasi yang sangat natural, penuh emosi, dan siap diunduh dalam kualitas audio WAV PCM standar studio.</textarea>
+                </div>
+
+                <!-- Character, Word & Chunk Counter Footer -->
+                <div class="mt-3 pt-3 border-t border-[#2c2826] flex flex-wrap items-center justify-between gap-3 text-xs text-vanillaDark">
+                    <div class="flex items-center gap-4 font-mono">
+                        <span>Karakter: <strong id="charCount" class="text-vanillaLight">0</strong></span>
+                        <span>Kata: <strong id="wordCount" class="text-vanillaLight">0</strong></span>
+                        <span>Estimasi Bagian (Chunk): <strong id="chunkCount" class="text-vanillaLight">1</strong></span>
+                    </div>
+                    <div class="text-[11px] text-vanillaDark/70 flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-vanillaDark"></span>
+                        Pemrosesan bertahap otomatis aktif untuk teks panjang
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action & Audio Generator Studio Panel -->
+            <div class="bg-bgPanel border border-[#2c2826] rounded-2xl p-5 shadow-xl space-y-5">
+                
+                <!-- Error / Alert Banner -->
+                <div id="errorAlert" class="hidden rounded-xl bg-redDark/40 border border-redMain p-4 text-sm text-vanillaLight flex items-start gap-3">
+                    <svg class="w-5 h-5 text-redMain shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div class="flex-1">
+                        <h4 id="errorTitle" class="font-semibold text-vanillaLight">Gagal Memproses Audio</h4>
+                        <p id="errorMessage" class="text-xs text-vanillaLight/80 mt-1"></p>
+                    </div>
+                    <button id="closeErrorBtn" class="text-vanillaDark hover:text-vanillaLight">&times;</button>
+                </div>
+
+                <!-- Generate Voice Button & Progress Indicator -->
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                    <button id="generateBtn" type="button" class="flex-1 py-4 px-6 rounded-xl bg-gradient-to-r from-redMain to-redDark hover:from-[#d93030] hover:to-redMain text-vanillaLight font-bold tracking-wide text-sm sm:text-base shadow-lg shadow-redMain/30 hover:shadow-redMain/50 flex items-center justify-center gap-3 transition transform active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed">
+                        <svg id="generateIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span id="generateBtnText">GENERATE VOICE</span>
+                    </button>
+                </div>
+
+                <!-- Progress Status Bar (Shown during generation) -->
+                <div id="progressContainer" class="hidden space-y-2 bg-bgMain p-4 rounded-xl border border-[#332e2c]">
+                    <div class="flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2.5">
+                            <div class="flex items-end gap-1 h-4">
+                                <span class="w-1 h-4 bg-redMain rounded-full wave-bar" style="animation-delay: 0.1s"></span>
+                                <span class="w-1 h-4 bg-redMain rounded-full wave-bar" style="animation-delay: 0.3s"></span>
+                                <span class="w-1 h-4 bg-redMain rounded-full wave-bar" style="animation-delay: 0.2s"></span>
+                                <span class="w-1 h-4 bg-redMain rounded-full wave-bar" style="animation-delay: 0.4s"></span>
+                            </div>
+                            <span id="progressStatusText" class="text-vanillaLight font-medium">Menghubungi Gemini TTS API...</span>
+                        </div>
+                        <span id="progressPercentage" class="font-mono text-vanillaDark">0%</span>
+                    </div>
+                    <div class="w-full h-2 bg-[#252220] rounded-full overflow-hidden">
+                        <div id="progressBar" class="h-full bg-gradient-to-r from-redMain to-vanillaDark transition-all duration-300" style="width: 10%"></div>
+                    </div>
+                </div>
+
+                <!-- Audio Player & WAV Download Result Box -->
+                <div id="audioResultBox" class="bg-bgMain border border-[#332e2c] rounded-xl p-4 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-redMain/20 border border-redMain/40 flex items-center justify-center text-redMain">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 id="audioMetaTitle" class="text-xs font-semibold text-vanillaLight">Pemutar Audio Master (WAV PCM 24kHz 16-bit)</h3>
+                                <p id="audioMetaSubtitle" class="text-[11px] text-vanillaDark/70">Klik Generate Voice untuk menghasilkan suara AI</p>
+                            </div>
+                        </div>
+
+                        <span id="wavFormatBadge" class="text-[11px] font-mono px-2.5 py-1 rounded-md bg-[#252220] text-vanillaDark border border-[#383330]">RIFF WAVE / PCM</span>
+                    </div>
+
+                    <!-- Waveform Canvas Visualizer + Native Audio Controls -->
+                    <div class="space-y-3">
+                        <canvas id="waveformCanvas" height="60" class="w-full h-14 bg-[#141312] rounded-lg border border-[#252220]"></canvas>
+                        <audio id="audioPlayer" controls class="w-full h-10 rounded-lg"></audio>
+                    </div>
+
+                    <!-- Download WAV Button -->
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-[#252220]">
+                        <div class="text-xs text-vanillaDark/80 font-mono" id="fileSizeInfo">
+                            Ukuran File: — KB | Durasi: — dtk
+                        </div>
+                        <button id="downloadWavBtn" type="button" disabled class="py-2.5 px-5 rounded-xl bg-vanillaDark hover:bg-vanillaLight text-bgMain font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition disabled:opacity-40 disabled:cursor-not-allowed shadow-md">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                            </svg>
+                            DOWNLOAD AUDIO (.WAV)
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal Info / Pengaturan -->
+    <div id="settingsModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-bgPanel border border-[#332e2c] rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-[#2c2826] pb-3">
+                <h3 class="font-bold text-vanillaLight">Konfigurasi Engine & Keamanan API</h3>
+                <button id="closeModalBtn" class="text-vanillaDark hover:text-vanillaLight text-xl">&times;</button>
+            </div>
+            <div class="space-y-3 text-xs text-vanillaDark leading-relaxed">
+                <p><strong class="text-vanillaLight">1 Paket Siap Pakai (Hybrid Engine):</strong> Aplikasi ini dapat langsung digunakan saat ini juga di panel Preview maupun dijalankan melalui server Node.js (<code class="text-vanillaLight">server.js</code>) dengan kredensial environment variable (<code class="text-vanillaLight">.env</code>).</p>
+                <p><strong class="text-vanillaLight">Konversi Audio WAV PCM Valid:</strong> Audio mentah dari Gemini (24.000 Hz, 16-bit Signed Integer, Mono PCM) dienkapsulasi dengan 44-byte header RIFF WAVE standar industri sehingga kompatibel di semua perangkat dan software editing.</p>
+                <p><strong class="text-vanillaLight">Pemrosesan Tanpa Batas:</strong> Teks panjang diproses secara bertahap per bagian kalimat utuh dan disatukan menjadi satu file audio WAV yang mulus.</p>
+            </div>
+            <div class="pt-2 flex justify-end">
+                <button id="closeModalBtn2" class="px-4 py-2 rounded-xl bg-redMain text-vanillaLight text-xs font-semibold">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Daftar Karakter Suara (Pria & Wanita) dengan pemetaan Prebuilt Voice Gemini + Persona AI Studio
+        const SPEAKERS = [
+            { id: 'Kore', name: 'Lumi (Kore)', gender: 'female', label: 'Wanita • Hangat & Bersahabat', desc: 'Suara wanita jernih, ramah, cocok untuk narasi & asisten.' },
+            { id: 'Aoede', name: 'Fola (Aoede)', gender: 'female', label: 'Wanita • Ekspresif & Bercerita', desc: 'Artikulasi hidup, sangat cocok untuk mendongeng dan puisi.' },
+            { id: 'Zephyr', name: 'Sola (Zephyr)', gender: 'female', label: 'Wanita • Lembut & Tenang', desc: 'Nada halus dan menenangkan untuk panduan atau relaksasi.' },
+            { id: 'Leda', name: 'Nika (Leda)', gender: 'female', label: 'Wanita • Profesional & Berita', desc: 'Tegas, formal, cocok untuk presentasi dan voiceover iklan.' },
+            { id: 'Puck', name: 'Koda (Puck)', gender: 'male', label: 'Pria • Energik & Modern', desc: 'Suara pria dinamis, bersahabat, cocok untuk konten kreator.' },
+            { id: 'Charon', name: 'Bodi (Charon)', gender: 'male', label: 'Pria • Berat & Sinematik', desc: 'Suara bariton rendah yang berwibawa untuk dokumenter.' },
+            { id: 'Fenrir', name: 'Raka (Fenrir)', gender: 'male', label: 'Pria • Tegas & Komando', desc: 'Kuat, dramatis, dan penuh determinasi.' },
+            { id: 'Orus', name: 'Arjuna (Orus)', gender: 'male', label: 'Pria • Bijaksana & Puitis', desc: 'Tenang, dewasa, dengan jeda narasi yang dalam.' }
+        ];
+
+        const SAMPLES = {
+            narasi: `Di balik kabut tebal pegunungan Nusantara, tersimpan kisah peradaban kuno yang jarang terdengar. [jeda sejenak] Setiap hembusan angin seolah membisikkan jejak langkah para leluhur yang hidup selaras dengan alam. Mari kita telusuri lebih dalam bagaimana harmoni tersebut bertahan melintasi abad.`,
+            puisi: `Senja perlahan melipat cahayanya di ufuk barat. [menghela napas] Di antara guguran daun kering, aku masih mengeja namamu dalam hening yang panjang. Waktu boleh saja berlalu, namun kenangan tentangmu tetap abadi seperti bintang pertama di langit malam.`,
+            iklan: `Ingin produktivitas kerja meningkat dua kali lipat tanpa ribet? [tertawa kecil] Saatnya beralih ke solusi pintar generasi terbaru! Dirancang khusus untuk para profesional modern, cepat, aman, dan siap mendukung kesuksesan Anda setiap hari. Coba sekarang juga!`
+        };
+
+        // State Aplikasi
+        let selectedSpeaker = SPEAKERS[0];
+        let selectedGenderFilter = 'all';
+        let selectedVibe = 'Profesional';
+        let selectedVibeDesc = 'Professional, clear, articulate, authoritative yet welcoming broadcast tone';
+        let currentWavBlob = null;
+        let isBackendAvailable = false;
+
+        // DOM Elements
+        const speakerGrid = document.getElementById('speakerGrid');
+        const genderTabs = document.querySelectorAll('.gender-tab');
+        const vibeChips = document.querySelectorAll('.vibe-chip');
+        const selectedVibeBadge = document.getElementById('selectedVibeBadge');
+        const speedRange = document.getElementById('speedRange');
+        const speedValueLabel = document.getElementById('speedValueLabel');
+        const narrativeInput = document.getElementById('narrativeInput');
+        const charCount = document.getElementById('charCount');
+        const wordCount = document.getElementById('wordCount');
+        const chunkCount = document.getElementById('chunkCount');
+        const generateBtn = document.getElementById('generateBtn');
+        const generateBtnText = document.getElementById('generateBtnText');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressStatusText = document.getElementById('progressStatusText');
+        const progressPercentage = document.getElementById('progressPercentage');
+        const progressBar = document.getElementById('progressBar');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const downloadWavBtn = document.getElementById('downloadWavBtn');
+        const errorAlert = document.getElementById('errorAlert');
+        const errorTitle = document.getElementById('errorTitle');
+        const errorMessage = document.getElementById('errorMessage');
+        const waveformCanvas = document.getElementById('waveformCanvas');
+        const modelSelect = document.getElementById('modelSelect');
+        const activeModelLabel = document.getElementById('activeModelLabel');
+
+        // Render Daftar Karakter Suara
+        function renderSpeakers() {
+            speakerGrid.innerHTML = '';
+            const filtered = SPEAKERS.filter(s => selectedGenderFilter === 'all' || s.gender === selectedGenderFilter);
+            
+            filtered.forEach(speaker => {
+                const isActive = speaker.id === selectedSpeaker.id;
+                const card = document.createElement('button');
+                card.type = 'button';
+                card.className = `speaker-card text-left p-3 rounded-xl border transition flex flex-col justify-between ${
+                    isActive ? 'active border-redMain' : 'bg-bgMain border-[#332e2c] hover:border-vanillaDark/50'
+                }`;
+                card.innerHTML = `
+                    <div class="flex items-center justify-between w-full mb-1">
+                        <span class="font-semibold text-xs text-vanillaLight flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full ${speaker.gender === 'female' ? 'bg-redMain' : 'bg-vanillaDark'}"></span>
+                            ${speaker.name}
+                        </span>
+                        <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#252220] text-vanillaDark">${speaker.gender === 'female' ? 'Wanita' : 'Pria'}</span>
+                    </div>
+                    <p class="text-[11px] text-vanillaDark font-medium">${speaker.label.split('•')[1]}</p>
+                    <p class="text-[10px] text-vanillaDark/60 mt-1 line-clamp-2">${speaker.desc}</p>
+                `;
+                card.addEventListener('click', () => {
+                    selectedSpeaker = speaker;
+                    renderSpeakers();
+                });
+                speakerGrid.appendChild(card);
+            });
+        }
+
+        // Filter Gender
+        genderTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                genderTabs.forEach(t => {
+                    t.classList.remove('bg-redMain', 'text-vanillaLight', 'font-medium');
+                    t.classList.add('text-vanillaDark');
+                });
+                tab.classList.add('bg-redMain', 'text-vanillaLight', 'font-medium');
+                tab.classList.remove('text-vanillaDark');
+                selectedGenderFilter = tab.dataset.gender;
+                renderSpeakers();
+            });
+        });
+
+        // Pilihan Vibe Suara
+        vibeChips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                vibeChips.forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                selectedVibe = chip.dataset.vibe;
+                selectedVibeDesc = chip.dataset.desc;
+                selectedVibeBadge.textContent = selectedVibe;
+            });
+        });
+
+        // Kecepatan Slider
+        speedRange.addEventListener('input', () => {
+            const val = parseFloat(speedRange.value).toFixed(2);
+            let desc = 'Normal';
+            if (val < 0.85) desc = 'Lambat';
+            else if (val > 1.2) desc = 'Cepat';
+            speedValueLabel.textContent = `${val}x (${desc})`;
+        });
+
+        // Model Select Change
+        modelSelect.addEventListener('change', () => {
+            activeModelLabel.textContent = modelSelect.value;
+        });
+
+        // Hitung Karakter, Kata, dan Chunk Narasi Tanpa Batas
+        function updateCounters() {
+            const text = narrativeInput.value;
+            const chars = text.length;
+            const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+            const chunks = Math.max(1, Math.ceil(chars / 1800));
+            charCount.textContent = chars.toLocaleString('id-ID');
+            wordCount.textContent = words.toLocaleString('id-ID');
+            chunkCount.textContent = chunks;
+        }
+        narrativeInput.addEventListener('input', updateCounters);
+
+        // Tombol Ekspresi Cepat
+        document.querySelectorAll('.expr-tag').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tag = btn.dataset.tag;
+                const start = narrativeInput.selectionStart;
+                const end = narrativeInput.selectionEnd;
+                const text = narrativeInput.value;
+                narrativeInput.value = text.substring(0, start) + tag + text.substring(end);
+                narrativeInput.focus();
+                narrativeInput.selectionStart = narrativeInput.selectionEnd = start + tag.length;
+                updateCounters();
+            });
+        });
+
+        // Tombol Contoh Teks
+        document.querySelectorAll('.sample-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                narrativeInput.value = SAMPLES[btn.dataset.sample];
+                updateCounters();
+            });
+        });
+
+        // Tombol Paste & Hapus
+        document.getElementById('pasteTextBtn').addEventListener('click', async () => {
+            try {
+                const clipText = await navigator.clipboard.readText();
+                if (clipText) {
+                    narrativeInput.value += (narrativeInput.value ? '\n\n' : '') + clipText;
+                    updateCounters();
+                }
+            } catch (err) {
+                showError('Info Clipboard', 'Silakan gunakan pintasan Ctrl+V (atau tekan tahan lalu Tempel) langsung di dalam kolom narasi.');
+            }
+        });
+
+        document.getElementById('clearTextBtn').addEventListener('click', () => {
+            narrativeInput.value = '';
+            updateCounters();
+            narrativeInput.focus();
+        });
+
+        // Fungsi Konversi Base64 ke Uint8Array PCM Mentah
+        function base64ToUint8Array(base64) {
+            const binaryString = window.atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            // Jika sudah ada header RIFF di awal chunk, buang 44 byte awal agar penggabungan multi-chunk mulus
+            if (len > 44 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) {
+                return bytes.subarray(44);
+            }
+            return bytes;
+        }
+
+        // Fungsi Menggabungkan Beberapa Uint8Array PCM Menjadi Satu
+        function concatUint8Arrays(arrays) {
+            const totalLength = arrays.reduce((acc, arr) => acc + arr.byteLength, 0);
+            const result = new Uint8Array(totalLength);
+            let offset = 0;
+            for (const arr of arrays) {
+                result.set(arr, offset);
+                offset += arr.byteLength;
+            }
+            return result;
+        }
+
+        // Fungsi Membagi Teks Panjang Menjadi Bagian Kalimat Utuh (Tanpa Memotong Diam-diam)
+        function splitTextIntoChunks(text, maxChunkSize = 1800) {
+            const cleanText = text.trim();
+            if (cleanText.length <= maxChunkSize) return [cleanText];
+
+            const sentences = cleanText.match(/[^.!?]+[.!?]+|\s*[^.!?]+$/g) || [cleanText];
+            const chunks = [];
+            let currentChunk = '';
+
+            for (const sentence of sentences) {
+                if ((currentChunk + sentence).length <= maxChunkSize) {
+                    currentChunk += sentence;
+                } else {
+                    if (currentChunk.trim()) chunks.push(currentChunk.trim());
+                    if (sentence.length > maxChunkSize) {
+                        // Jika satu kalimat sangat panjang tanpa titik, bagi berdasarkan spasi kata
+                        const words = sentence.split(' ');
+                        let subChunk = '';
+                        for (const word of words) {
+                            if ((subChunk + ' ' + word).length <= maxChunkSize) {
+                                subChunk += (subChunk ? ' ' : '') + word;
+                            } else {
+                                chunks.push(subChunk.trim());
+                                subChunk = word;
+                            }
+                        }
+                        currentChunk = subChunk;
+                    } else {
+                        currentChunk = sentence;
+                    }
+                }
+            }
+            if (currentChunk.trim()) chunks.push(currentChunk.trim());
+            return chunks;
+        }
+
+        // Fungsi Membuat Bytes WAV PCM Valid (44-byte RIFF Header + 16-bit Signed PCM Data)
+        function createValidWavBytes(pcmUint8Array, sampleRate = 24000, numChannels = 1, bitsPerSample = 16) {
+            const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+            const blockAlign = numChannels * (bitsPerSample / 8);
+            const dataSize = pcmUint8Array.byteLength;
+            const buffer = new ArrayBuffer(44 + dataSize);
+            const view = new DataView(buffer);
+
+            function writeString(offset, str) {
+                for (let i = 0; i < str.length; i++) {
+                    view.setUint8(offset + i, str.charCodeAt(i));
+                }
+            }
+
+            // RIFF identifier
+            writeString(0, 'RIFF');
+            view.setUint32(4, 36 + dataSize, true);
+            writeString(8, 'WAVE');
+            // fmt subchunk
+            writeString(12, 'fmt ');
+            view.setUint32(16, 16, true);           // Subchunk1Size (16 for PCM)
+            view.setUint16(20, 1, true);            // AudioFormat (1 = Linear PCM)
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, byteRate, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, bitsPerSample, true);
+            // data subchunk
+            writeString(36, 'data');
+            view.setUint32(40, dataSize, true);
+
+            const wavBytes = new Uint8Array(buffer);
+            wavBytes.set(pcmUint8Array, 44);
+            return wavBytes;
+        }
+
+        // Fungsi Menampilkan Pesan Error / Info
+        function showError(title, message) {
+            errorTitle.textContent = title;
+            errorMessage.textContent = message;
+            errorAlert.classList.remove('hidden');
+        }
+
+        document.getElementById('closeErrorBtn').addEventListener('click', () => {
+            errorAlert.classList.add('hidden');
+        });
+
+        // Gambar Visualisasi Gelombang Audio dari Data PCM 16-bit
+        function drawWaveformFromPcm(pcmUint8Array) {
+            const ctx = waveformCanvas.getContext('2d');
+            const width = waveformCanvas.width = waveformCanvas.clientWidth || 600;
+            const height = waveformCanvas.height = 60;
+
+            ctx.clearRect(0, 0, width, height);
+
+            const int16Data = new Int16Array(
+                pcmUint8Array.buffer,
+                pcmUint8Array.byteOffset,
+                Math.floor(pcmUint8Array.byteLength / 2)
+            );
+
+            if (int16Data.length === 0) return;
+
+            const bars = 90;
+            const step = Math.max(1, Math.floor(int16Data.length / bars));
+            const barWidth = (width / bars) * 0.65;
+
+            for (let i = 0; i < bars; i++) {
+                let sum = 0;
+                const start = i * step;
+                for (let j = 0; j < step && (start + j) < int16Data.length; j++) {
+                    sum += Math.abs(int16Data[start + j]);
+                }
+                const avg = sum / step;
+                const normalized = Math.min(1, (avg / 32768) * 2.8);
+                const barHeight = Math.max(4, normalized * (height - 10));
+
+                const x = i * (width / bars) + 2;
+                const y = (height - barHeight) / 2;
+
+                ctx.fillStyle = i % 2 === 0 ? '#C62828' : '#D6B98C';
+                ctx.beginPath();
+                if (ctx.roundRect) {
+                    ctx.roundRect(x, y, barWidth, barHeight, 3);
+                } else {
+                    ctx.rect(x, y, barWidth, barHeight);
+                }
+                ctx.fill();
+            }
+        }
+
+        // Panggilan Gemini TTS Langsung (Digunakan Otomatis Saat Mode Siap Pakai / Tanpa Server Lokal)
+        async function synthesizeChunkDirect(chunkText, config) {
+            const speedInstruction =
+                config.speed < 0.85 ? 'Speak at a slow, deliberate pace.' :
+                config.speed > 1.2 ? 'Speak at a brisk, fast, energetic pace.' :
+                'Speak at a natural, balanced pace.';
+
+            const directorPrompt = [
+                `Say in ${config.language} with a ${config.vibe.toLowerCase()} tone (${config.vibeDescription}).`,
+                `Delivery style: ${config.deliveryStyle}. Pitch: ${config.pitch}. ${speedInstruction}`,
+                config.customInstruction ? `Additional note: ${config.customInstruction}.` : '',
+                `Transcript: ${chunkText}`
+            ].filter(Boolean).join(' ');
+
+            const apiKey = ""; // Otomatis diisi oleh environment Canvas
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{
+                    parts: [{ text: directorPrompt }]
+                }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: {
+                        voiceConfig: {
+                            prebuiltVoiceConfig: {
+                                voiceName: config.voiceName || "Kore"
+                            }
+                        }
+                    }
+                },
+                model: "gemini-2.5-flash-preview-tts"
+            };
+
+            let delay = 1000;
+            for (let attempt = 0; attempt < 3; attempt++) {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.status === 429 && attempt < 2) {
+                    await new Promise(r => setTimeout(r, delay));
+                    delay *= 2;
+                    continue;
+                }
+
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    const msg = result?.error?.message || `HTTP ${response.status}`;
+                    throw new Error(msg);
+                }
+
+                const part = result?.candidates?.[0]?.content?.parts?.[0];
+                const audioData = part?.inlineData?.data;
+                const mimeType = part?.inlineData?.mimeType || "audio/L16;rate=24000";
+
+                if (!audioData) {
+                    throw new Error('Respons Gemini TTS tidak berisi aliran audio PCM.');
+                }
+
+                let sampleRate = 24000;
+                const rateMatch = mimeType.match(/rate=(\d+)/);
+                if (rateMatch) sampleRate = parseInt(rateMatch[1], 10);
+
+                return {
+                    pcmBytes: base64ToUint8Array(audioData),
+                    sampleRate
+                };
+            }
+            throw new Error('Batas percobaan ke server Gemini TTS terlampaui.');
+        }
+
+        // Eksekusi Generate Voice (Otomatis Backend Node.js atau Direct Gemini TTS Engine)
+        generateBtn.addEventListener('click', async () => {
+            const text = narrativeInput.value.trim();
+            if (!text) {
+                showError('Kolom Narasi Kosong', 'Silakan masukkan atau tempelkan teks narasi yang ingin diubah menjadi suara terlebih dahulu.');
+                return;
+            }
+
+            errorAlert.classList.add('hidden');
+            generateBtn.disabled = true;
+            generateBtnText.textContent = 'MEMPROSES SUARA AI...';
+            progressContainer.classList.remove('hidden');
+            progressBar.style.width = '10%';
+            progressPercentage.textContent = '10%';
+            progressStatusText.textContent = 'Menyiapkan pemrosesan teks bertahap...';
+
+            const chunks = splitTextIntoChunks(text, 1800);
+            const payloadBase = {
+                language: document.getElementById('languageSelect').value,
+                model: modelSelect.value,
+                voiceName: selectedSpeaker.id,
+                speakerLabel: selectedSpeaker.name,
+                gender: selectedSpeaker.gender,
+                vibe: selectedVibe,
+                vibeDescription: selectedVibeDesc,
+                speed: parseFloat(speedRange.value),
+                deliveryStyle: document.getElementById('deliveryStyleSelect').value,
+                pitch: document.getElementById('pitchSelect').value,
+                customInstruction: document.getElementById('customStyleInput').value.trim()
+            };
+
+            try {
+                let wavBytes = null;
+                let detectedSampleRate = 24000;
+
+                // 1. Jika Server Backend Node.js aktif, gunakan endpoint /api/tts
+                if (isBackendAvailable) {
+                    progressStatusText.textContent = `Mengirim ${chunks.length} bagian narasi ke Server Backend Node.js...`;
+                    progressBar.style.width = '40%';
+                    progressPercentage.textContent = '40%';
+
+                    const response = await fetch('/api/tts', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            ...payloadBase,
+                            text,
+                            chunks
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errData = await response.json().catch(() => ({}));
+                        throw new Error(errData.error || `Gagal menghubungi endpoint Gemini TTS (HTTP ${response.status}).`);
+                    }
+
+                    const arrayBuffer = await response.arrayBuffer();
+                    wavBytes = new Uint8Array(arrayBuffer);
+                } else {
+                    // 2. Mode Siap Pakai Langsung: Panggil Gemini TTS per chunk & rakit WAV PCM valid
+                    const pcmParts = [];
+                    for (let i = 0; i < chunks.length; i++) {
+                        const pct = Math.round(15 + ((i / chunks.length) * 65));
+                        progressBar.style.width = `${pct}%`;
+                        progressPercentage.textContent = `${pct}%`;
+                        progressStatusText.textContent = `Menghasilkan suara AI bagian ${i + 1} dari ${chunks.length}...`;
+
+                        const { pcmBytes, sampleRate } = await synthesizeChunkDirect(chunks[i], payloadBase);
+                        detectedSampleRate = sampleRate || 24000;
+                        pcmParts.push(pcmBytes);
+                    }
+
+                    progressStatusText.textContent = 'Mengenkapsulasi PCM 16-bit menjadi RIFF WAV valid...';
+                    progressBar.style.width = '88%';
+                    progressPercentage.textContent = '88%';
+
+                    const combinedPcm = concatUint8Arrays(pcmParts);
+                    wavBytes = createValidWavBytes(combinedPcm, detectedSampleRate, 1, 16);
+                }
+
+                currentWavBlob = new Blob([wavBytes], { type: 'audio/wav' });
+                const audioUrl = URL.createObjectURL(currentWavBlob);
+                audioPlayer.src = audioUrl;
+                audioPlayer.playbackRate = payloadBase.speed;
+
+                // Gambar Waveform dari payload PCM (mulai byte ke-44 setelah header WAV)
+                if (wavBytes.byteLength > 44) {
+                    drawWaveformFromPcm(wavBytes.subarray(44));
+                }
+
+                const sizeKb = (currentWavBlob.size / 1024).toFixed(1);
+                const durationSec = ((wavBytes.byteLength - 44) / (detectedSampleRate * 2)).toFixed(1);
+                document.getElementById('fileSizeInfo').textContent = `Ukuran File: ${sizeKb} KB | Durasi: ${durationSec} dtk | ${detectedSampleRate / 1000}kHz 16-bit Mono PCM`;
+                document.getElementById('audioMetaSubtitle').textContent = `${selectedSpeaker.name} • Vibe ${selectedVibe} • ${chunks.length} Bagian digabung`;
+
+                downloadWavBtn.disabled = false;
+                progressBar.style.width = '100%';
+                progressPercentage.textContent = '100%';
+                progressStatusText.textContent = 'Selesai! Audio WAV siap diputar dan diunduh.';
+
+                audioPlayer.play().catch(() => {});
+            } catch (err) {
+                showError('Kesalahan Integrasi API / Koneksi', err.message);
+            } finally {
+                generateBtn.disabled = false;
+                generateBtnText.textContent = 'GENERATE VOICE';
+                setTimeout(() => {
+                    progressContainer.classList.add('hidden');
+                }, 2500);
+            }
+        });
+
+        // Tombol Download Audio WAV
+        downloadWavBtn.addEventListener('click', () => {
+            if (!currentWavBlob) return;
+            const url = URL.createObjectURL(currentWavBlob);
+            const a = document.createElement('a');
+            const safeVibe = selectedVibe.toLowerCase().replace(/\s+/g, '-');
+            a.href = url;
+            a.download = `gemini-tts-${selectedSpeaker.id.toLowerCase()}-${safeVibe}-${Date.now()}.wav`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        // Tombol Unduh 1 Paket Installer Server Lengkap (Self-Extracting Node.js Bundle)
+        document.getElementById('downloadBundleBtn').addEventListener('click', () => {
+            const installerScript = `/**
+ * ============================================================================
+ * 1 PAKET INSTALLER OTOMATIS — VOCALIS AI STUDIO (GEMINI TTS)
+ * Cara pakai:
+ * 1. Simpan file ini di dalam folder kosong, lalu jalankan:
+ *    node setup-vocalis-tts.js
+ * 2. Selanjutnya jalankan:
+ *    npm install && npm start
+ * ============================================================================
+ */
+const fs = require('fs');
+const path = require('path');
+
+fs.mkdirSync(path.join(__dirname, 'public'), { recursive: true });
+
+// 1. Tulis file .env
+fs.writeFileSync(path.join(__dirname, '.env'), \`GEMINI_API_KEY=AQ.Ab8RN6Jql2e0Rg-OVC9luUDxLVIfqQd-hg96bZOf86apOSMpvA
+PORT=3000
+\`);
+
+// 2. Tulis file package.json
+fs.writeFileSync(path.join(__dirname, 'package.json'), JSON.stringify({
+  name: "gemini-ai-tts-studio",
+  version: "1.0.0",
+  description: "Aplikasi Web AI Text to Speech (TTS) Modern dengan Google Gemini API & Konversi WAV PCM",
+  main: "server.js",
+  scripts: { start: "node server.js" },
+  dependencies: { cors: "^2.8.5", dotenv: "^16.4.7", express: "^4.21.2" }
+}, null, 2));
+
+// 3. Tulis file public/index.html dari dokumen saat ini
+fs.writeFileSync(path.join(__dirname, 'public', 'index.html'), ${JSON.stringify('<!DOCTYPE html>\n' + document.documentElement.outerHTML)});
+
+console.log('✅ Paket proyek berhasil diekstrak! Jalankan: npm install && npm start');
+`;
+            const blob = new Blob([installerScript], { type: 'application/javascript' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'setup-vocalis-tts.js';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        // Modal Pengaturan
+        const settingsModal = document.getElementById('settingsModal');
+        document.getElementById('toggleModelModalBtn').addEventListener('click', () => {
+            settingsModal.classList.remove('hidden');
+            settingsModal.classList.add('flex');
+        });
+        [document.getElementById('closeModalBtn'), document.getElementById('closeModalBtn2')].forEach(btn => {
+            btn.addEventListener('click', () => {
+                settingsModal.classList.add('hidden');
+                settingsModal.classList.remove('flex');
+            });
+        });
+
+        // Cek Kesehatan Backend saat halaman dimuat
+        async function checkBackendHealth() {
+            const dot = document.getElementById('statusDot');
+            const txt = document.getElementById('statusText');
+            try {
+                const res = await fetch('/api/health');
+                if (res.ok) {
+                    const data = await res.json();
+                    isBackendAvailable = true;
+                    dot.className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
+                    txt.textContent = data.apiKeyConfigured ? 'Node.js + Gemini Aktif' : 'API Key Belum Diatur';
+                } else {
+                    throw new Error();
+                }
+            } catch {
+                isBackendAvailable = false;
+                dot.className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
+                txt.textContent = 'Siap Pakai (Direct TTS)';
+            }
+        }
+
+        // Inisialisasi Awal
+        renderSpeakers();
+        updateCounters();
+        checkBackendHealth();
+    </script>
+</body>
+</html>
